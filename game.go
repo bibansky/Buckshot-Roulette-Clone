@@ -28,7 +28,10 @@ type Game struct {
 	playerWon bool
 	state     GameState
 
-	startButton Button
+	startButton  Button
+	exitButton   Button
+	playerButton Button
+	dealerButton Button
 }
 
 func (g *Game) Update() error {
@@ -36,10 +39,12 @@ func (g *Game) Update() error {
 	case StateMenu:
 		if g.startButton.isClicked() {
 			g.state = StatePlayerTurn
+		} else if g.exitButton.isClicked() {
+			return ebiten.Termination
 		}
 
 	case StatePlayerTurn:
-		if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+		if g.dealerButton.isClicked() {
 			shell := g.takeShell()
 			if shell.Live {
 				g.dealerHealth--
@@ -48,7 +53,7 @@ func (g *Game) Update() error {
 				g.state = StateDealerTurn
 			}
 
-		} else if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonRight) {
+		} else if g.playerButton.isClicked() {
 			shell := g.takeShell()
 			if shell.Live {
 				g.playerHealth--
@@ -107,25 +112,25 @@ func (g *Game) Draw(screen *ebiten.Image) {
 	}
 	if g.state == StateMenu {
 		g.startButton.draw(screen)
-		ebitenutil.DebugPrintAt(screen, "EXIT", 430, 350)
+		g.exitButton.draw(screen)
 	}
 
 	if g.state == StatePlayerTurn {
-		ebitenutil.DebugPrintAt(screen, "DEALER", 430, 330)
-		ebitenutil.DebugPrintAt(screen, "YOU", 430, 350)
+		g.dealerButton.draw(screen)
+		g.playerButton.draw(screen)
 	}
 
 	if g.state == StateDealerTurn {
-		ebitenutil.DebugPrintAt(screen, "DEALER TURN", 430, 330)
+		ebitenutil.DebugPrintAt(screen, "DEALER TURN", (screenWidth-len("DEALER TURN")*debugCharWidth)/2, 350)
 	}
 
 	if g.state == StateGameOver {
 		if g.playerWon == true {
-			ebitenutil.DebugPrintAt(screen, "YOU WIN", 430, 330)
+			ebitenutil.DebugPrintAt(screen, "YOU WIN", (screenWidth-len("YOU WIN")*debugCharWidth)/2, 350)
 		} else {
-			ebitenutil.DebugPrintAt(screen, "YOU LOSE", 430, 330)
+			ebitenutil.DebugPrintAt(screen, "YOU LOSE", (screenWidth-len("YOU LOSE")*debugCharWidth)/2, 350)
 		}
-		ebitenutil.DebugPrintAt(screen, "RETURN PRESS R", 430, 350)
+		ebitenutil.DebugPrintAt(screen, "RETURN PRESS R", (screenWidth-len("RETURN PRESS R")*debugCharWidth)/2, 375)
 	}
 }
 
@@ -165,8 +170,25 @@ func (g *Game) restart() {
 		}
 		g.playerWon = false
 		g.state = StateMenu
+		g.startButton = Button{
+			X:    (screenWidth - len(startText)*debugCharWidth) / 2,
+			Y:    350,
+			Text: startText,
+		}
+		g.exitButton = Button{
+			X:    (screenWidth - len(exitText)*debugCharWidth) / 2,
+			Y:    375,
+			Text: exitText,
+		}
 	}
 }
+
+const (
+	startText  = "START"
+	exitText   = "EXIT"
+	playerText = "YOU"
+	dealerText = "DEALER"
+)
 
 func newGame() *Game {
 	return &Game{
@@ -185,11 +207,24 @@ func newGame() *Game {
 		playerWon: false,
 		state:     StateMenu,
 		startButton: Button{
-			X:      400,
-			Y:      300,
-			Width:  160,
-			Height: 50,
-			Text:   "Start",
+			X:    (screenWidth - len(startText)*debugCharWidth) / 2,
+			Y:    350,
+			Text: startText,
+		},
+		exitButton: Button{
+			X:    (screenWidth - len(exitText)*debugCharWidth) / 2,
+			Y:    375,
+			Text: exitText,
+		},
+		playerButton: Button{
+			X:    (screenWidth - len(playerText)*debugCharWidth) / 2,
+			Y:    375,
+			Text: playerText,
+		},
+		dealerButton: Button{
+			X:    (screenWidth - len(dealerText)*debugCharWidth) / 2,
+			Y:    350,
+			Text: dealerText,
 		},
 	}
 
