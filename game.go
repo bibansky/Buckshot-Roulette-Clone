@@ -13,6 +13,9 @@ type GameState int
 
 const (
 	StateMenu GameState = iota
+	StateRound1
+	StateRound2
+	StateRound3
 	StatePlayerTurn
 	StateDealerTurn
 	StateGameOver
@@ -32,13 +35,15 @@ type Game struct {
 	exitButton   Button
 	playerButton Button
 	dealerButton Button
+
+	round int
 }
 
 func (g *Game) Update() error {
 	switch g.state {
 	case StateMenu:
 		if g.startButton.isClicked() {
-			g.state = StatePlayerTurn
+			g.state = StateRound1
 		} else if g.exitButton.isClicked() {
 			return ebiten.Termination
 		}
@@ -97,6 +102,23 @@ func (g *Game) Update() error {
 		if inpututil.IsKeyJustPressed(ebiten.KeyR) {
 			g.restart()
 		}
+
+	case StateRound1:
+		g.playerHealth = 2
+		g.dealerHealth = 2
+		g.state = StatePlayerTurn
+
+	case StateRound2:
+		g.playerHealth = 4
+		g.dealerHealth = 4
+		g.state = StatePlayerTurn
+		g.loadShells()
+
+	case StateRound3:
+		g.playerHealth = 6
+		g.dealerHealth = 6
+		g.state = StatePlayerTurn
+		g.loadShells()
 	}
 
 	g.statusGameOver()
@@ -124,6 +146,18 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		ebitenutil.DebugPrintAt(screen, "DEALER TURN", (screenWidth-len("DEALER TURN")*debugCharWidth)/2, 350)
 	}
 
+	if g.round == 0 && g.state != StateMenu {
+		ebitenutil.DebugPrintAt(screen, "ROUND1", (screenWidth-len("ROUND1")*debugCharWidth)/2, 0)
+	}
+
+	if g.round == 1 {
+		ebitenutil.DebugPrintAt(screen, "ROUND2", (screenWidth-len("ROUND2")*debugCharWidth)/2, 0)
+	}
+
+	if g.round == 2 {
+		ebitenutil.DebugPrintAt(screen, "ROUND3", (screenWidth-len("ROUND3")*debugCharWidth)/2, 0)
+	}
+
 	if g.state == StateGameOver {
 		if g.playerWon == true {
 			ebitenutil.DebugPrintAt(screen, "YOU WIN", (screenWidth-len("YOU WIN")*debugCharWidth)/2, 350)
@@ -139,16 +173,39 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 func (g *Game) statusGameOver() bool {
-	if g.dealerHealth <= 0 {
+
+	if g.dealerHealth <= 0 && g.round == 0 {
+		g.round++
+		g.playerWon = true
+		g.state = StateRound2
+		return true
+	} else if g.dealerHealth <= 0 && g.round == 1 {
+		g.round++
+		g.playerWon = true
+		g.state = StateRound3
+		return true
+	} else if g.dealerHealth <= 0 && g.round == 2 {
+		g.round++
 		g.playerWon = true
 		g.state = StateGameOver
 		return true
 	}
 
-	if g.playerHealth <= 0 {
+	if g.playerHealth <= 0 && g.round == 0 {
+		g.round++
 		g.playerWon = false
 		g.state = StateGameOver
-		return true
+		return false
+	} else if g.playerHealth <= 0 && g.round == 1 {
+		g.round++
+		g.playerWon = false
+		g.state = StateGameOver
+		return false
+	} else if g.playerHealth <= 0 && g.round == 2 {
+		g.round++
+		g.playerWon = false
+		g.state = StateGameOver
+		return false
 	}
 
 	return false
@@ -180,6 +237,17 @@ func (g *Game) restart() {
 			Y:    375,
 			Text: exitText,
 		}
+		g.playerButton = Button{
+			X:    (screenWidth - len(playerText)*debugCharWidth) / 2,
+			Y:    375,
+			Text: playerText,
+		}
+		g.dealerButton = Button{
+			X:    (screenWidth - len(dealerText)*debugCharWidth) / 2,
+			Y:    350,
+			Text: dealerText,
+		}
+		g.round = 0
 	}
 }
 
@@ -198,11 +266,8 @@ func newGame() *Game {
 		shells: []Shell{
 			{true},
 			{false},
+			{true},
 			{false},
-			{true},
-			{true},
-			{true},
-			{true},
 		},
 		playerWon: false,
 		state:     StateMenu,
@@ -226,6 +291,7 @@ func newGame() *Game {
 			Y:    350,
 			Text: dealerText,
 		},
+		round: 0,
 	}
 
 }
